@@ -7,7 +7,7 @@
  * Or gate:
  * out = 1 if (a == 1 or b == 1)
  *       0 otherwise
- * a || b = !(a && b)
+ * a || b = !(!a && !b)
  */
 
 CHIP Or {
@@ -17,8 +17,5 @@ CHIP Or {
     PARTS:
     Not(in=a, out=nota);
     Not(in=b, out=notb);
-    And(a=nota, b=notb, out=and);
-    Not(in=and, out=out);
-    /*
-    */
+    Nand(a=nota, b=notb, out=out);
 }
