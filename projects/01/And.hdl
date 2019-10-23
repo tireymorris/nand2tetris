@@ -8,7 +8,7 @@
  * out = 1 if (a == 1 and b == 1)
  *       0 otherwise
  * a && b = Not(Nand(a, b))
- * a && b = 
+ * a && b = !(!(a && b) && !(a && b)) 
  */
 
 CHIP And {
@@ -17,8 +17,7 @@ CHIP And {
 
     PARTS:
     Nand(a=a, b=b, out=nand);
-    Not(in=nand, out=out);
-    /*
-     
-     */
+    Nand(a=nand, b=nand, out=out);
+    // Nand(a=a, b=b, out=nand);
+    // Not(in=nand, out=out);    
 }
