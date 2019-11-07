@@ -42,30 +42,31 @@ CHIP ALU {
         ng; // 1 if (out < 0),  0 otherwise
 
     PARTS:
-    Not16(in=x, out=notX);
+    // if zx, feed false, else x
+    // if nx, feed notx, else x
     Mux16(a=x, b=false, sel=zx, out=preXVal);
-    Mux16(a=xVal, b=notx, sel=nx, out=postXVal);
+    Not16(in=preXVal, out=notX);
+    Mux16(a=preXVal, b=notX, sel=nx, out=postXVal);
 
-    Not16(in=y, out=notY);
+    // y = zy ? 0 : y
+    // ny = noty ? !y : y
     Mux16(a=y, b=false, sel=zy, out=preYVal);
-    Mux16(a=yVal, b=noty, sel=ny, out=postYVal);
+    Not16(in=preYVal, out=notY);
+    Mux16(a=preYVal, b=notY, sel=ny, out=postYVal);
 
+    // Calculate output = f ? And(x,y) : Add(x,y)
     And16(a=postXVal, b=postYVal, out=and);
     Add16(a=postXVal, b=postYVal, out=add);
     Mux16(a=and, b=add, sel=f, out=outVal);
 
+    // if no, negate the output
+    // ng = out[15]
     Not16(in=outVal, out=notOutVal);
-    Mux16(a=outVal, b=notOutVal, sel=no, out=out);
-    
-    // finally, negate the output
-    // if out<0, MSB will be 1, so can set that here
-    Not16(in=xy, out=notxy);
-    Mux16(a=xy, b=notxy, sel=no, out[15]=ng, out[0..7]=part1, out[8..15]=part2, out=out);
+    Mux16(a=outVal, b=notOutVal, sel=no, out[15]=ng, out[0..7]=part1, out[8..15]=part2, out=out);
 
-    // if all of out = 0, then Or8Way(out[0..7]) or Or8Way(out[8..15]) is false ... 
-    Not(in=nonzero, out=zr); 
-    Or(a=or1, b=or2, out=nonzero); // checking if any digits are nonzero
-    Or8Way(in=part1, out=or1); // checking each 8-bit chunk for nonzero
-    Or8Way(in=part2, out=or2);
-    Not
+    // calculate zr, if result == zero
+    Or8Way(in=part1, out=zr1);
+    Or8Way(in=part2, out=zr2);
+    Or(a=zr1, b=zr2, out=nzr);
+    Not(in=nzr, out=zr);
 }
