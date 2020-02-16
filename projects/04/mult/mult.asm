@@ -7,3 +7,39 @@
 // (R0, R1, R2 refer to RAM[0], RAM[1], and RAM[2], respectively.)
 
 // Put your code here.
+
+
+// Zero out R2
+@0
+D=A
+@R2
+M=D
+
+// initialize loop_count as R1 value
+@R1
+D=M
+@loop_count
+M=D
+
+(MULT_LOOP)
+  // add R2 value to R0 value
+  @R0
+  D=M
+  @R2
+  M=D+M
+
+  // decrement loop_count
+  @1
+  D=A
+  @loop_count
+  M=M-D
+
+  // continue if loop_count > 0
+  @loop_count
+  D=M
+  @MULT_LOOP
+  D;JGT
+
+(END)
+@END
+0;JMP
