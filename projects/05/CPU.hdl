@@ -26,7 +26,6 @@
  */
 
 CHIP CPU {
-
     IN  inM[16],         // M value input  (M = contents of RAM[A])
         instruction[16], // Instruction for execution
         reset;           // Signals whether to re-start the current
@@ -39,5 +38,69 @@ CHIP CPU {
         pc[15];          // address of next instruction
 
     PARTS:
+    // decode instruction type
+    Not(in=instruction[15], out=aInstruction);
+    Not(in=aInstruction, out=cInstruction);
+
+    // decode ALU register destination
+    DMux8Way(in=true, sel=instruction[3..5], a=noDest, b=m, c=d, d=md, e=a, f=am, g=ad, h=amd);
+    Or8Way(in[0]=d, in[1]=md, in[2]=ad, in[3]=amd, in[4..7]=false, out=destD);
+    Or8Way(in[0]=a, in[1]=am, in[2]=ad, in[3]=amd, in[4..7]=false, out=destA);
+
+    // decode ALU writeM/memory destination
+    Or8Way(in[0]=m, in[1]=md, in[2]=am, in[3]=amd, in[4..7]=false, out=destM);
+    And(a=destM, b=cInstruction, out=writeM);
+
+
+    // A register
+    Mux16(a=instruction, b=aluOut, sel=cInstruction, out=aIn);
+    Or(a=aInstruction, b=destA, out=loadA);
+    ARegister(in=aIn, load=loadA, out=aOut, out[0..14]=addressM);
+
+
+    // ALU
+    Mux16(a=aOut, b=inM, sel=instruction[12], out=aluMorA);
+
+    ALU(
+        x=dOut,
+        y=aluMorA,
+        zx=instruction[11],
+        nx=instruction[10],
+        zy=instruction[9],
+        ny=instruction[8],
+        f=instruction[7],
+        no=instruction[6],
+        out=aluOut,
+        out=outM,
+        zr=zr,
+        ng=ng
+    );
+
+
+    // D register
+    And(a=cInstruction, b=destD, out=loadD);
+    DRegister(in=aluOut, load=loadD, out=dOut);
     
+
+    // PC    
+    // decode jumps
+    DMux8Way(in=true, sel=instruction[0..2], a=nullJmp, b=jgt, c=jeq, d=jge, e=jlt, f=jne, g=jle, h=jmp);
+
+    Not(in=zr, out=ne);
+    Not(in=ng, out=ge);
+    And(a=ge, b=ne, out=gt);
+    Or(a=zr, b=ng, out=le);
+
+    And(a=jgt, b=gt, out=isgt);
+    And(a=jeq, b=zr, out=iseq);
+    And(a=jge, b=ge, out=isge);
+    And(a=jlt, b=ng, out=islt);
+    And(a=jne, b=ne, out=isne);
+    And(a=jle, b=le, out=isle);
+
+    Or8Way(in[0]=false, in[1]=isgt, in[2]=iseq, in[3]=isge, in[4]=islt, in[5]=isne, in[6]=isle, in[7]=jmp, out=validJump);
+    And(a=validJump, b=cInstruction, out=shouldJump);
+    Not(in=shouldJump, out=noJump);
+
+    PC(in=aOut, load=shouldJump, inc=noJump, reset=reset, out[0..14]=pc);
 }
